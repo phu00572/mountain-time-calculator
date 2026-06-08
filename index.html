@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山域安全：行進時間估算工具</title>
+    <!-- 引入 Tailwind CSS 進行快速且響應式的排版 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 確保觸控點擊的流暢度與自定義核取方塊樣式 */
+        input[type="checkbox"] {
+            width: 1.5rem;
+            height: 1.5rem;
+            accent-color: #ea580c; /* 鮮橘色 */
+            cursor: pointer;
+        }
+        /* 隱藏數字輸入框的上下箭頭以保持介面乾淨 */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-stone-800 font-sans min-h-screen p-4 md:p-8 flex items-center justify-center">
+
+    <!-- 主容器：手機版滿版，平板/電腦版限制最大寬度，避免橫向滾動 -->
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border-t-8 border-green-800">
+        
+        <!-- 標題區塊 -->
+        <div class="bg-green-800 p-6 text-white text-center">
+            <h1 class="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                行進時間估算工具
+            </h1>
+            <p class="text-green-100 mt-2 text-sm md:text-base">Naismith's Rule & Langmuir Corrections</p>
+        </div>
+
+        <!-- 表單輸入區塊 -->
+        <div class="p-6 space-y-5">
+            
+            <!-- 距離輸入 -->
+            <div>
+                <label for="distance" class="block text-lg font-semibold text-green-900 mb-1">總距離 (公里)</label>
+                <!-- min-h-[44px] 與 p-3 確保手指觸控面積足夠 -->
+                <input type="number" id="distance" placeholder="例如：5" min="0" step="0.1" 
+                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
+            </div>
+
+            <!-- 爬升輸入 -->
+            <div>
+                <label for="ascent" class="block text-lg font-semibold text-green-900 mb-1">總爬升高度 (公尺)</label>
+                <input type="number" id="ascent" placeholder="例如：600" min="0" step="10" 
+                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
+            </div>
+
+            <!-- 下降輸入 -->
+            <div>
+                <label for="descent" class="block text-lg font-semibold text-green-900 mb-1">總下降高度 (公尺)</label>
+                <input type="number" id="descent" placeholder="例如：300" min="0" step="10" 
+                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
+            </div>
+
+            <!-- 條件選項 (Checkbox) -->
+            <div class="bg-stone-50 p-4 rounded-lg space-y-4 border border-stone-200">
+                <label class="flex items-center space-x-3 cursor-pointer p-1">
+                    <input type="checkbox" id="isSteep">
+                    <span class="text-lg font-medium text-stone-700">陡峭困難下坡</span>
+                    <span class="text-sm text-stone-500 block ml-auto">(會增加耗時)</span>
+                </label>
+                
+                <hr class="border-stone-200">
+
+                <label class="flex items-center space-x-3 cursor-pointer p-1">
+                    <input type="checkbox" id="isHeavy">
+                    <span class="text-lg font-medium text-stone-700">重裝行進</span>
+                    <span class="text-sm text-stone-500 block ml-auto">(速度降 30%)</span>
+                </label>
+            </div>
+
+            <!-- 計算按鈕：鮮橘色高對比 -->
+            <button onclick="calculateTime()" 
+                class="w-full min-h-[56px] mt-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xl font-bold rounded-xl shadow-md transition-all flex justify-center items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                開始計算
+            </button>
+
+        </div>
+
+        <!-- 結果顯示區塊 (預設隱藏) -->
+        <div id="resultBox" class="hidden bg-green-50 p-6 border-t border-green-200 text-center">
+            <h2 class="text-lg text-green-800 font-semibold mb-2">預估純行進時間</h2>
+            <div class="text-4xl md:text-5xl font-extrabold text-orange-600 tracking-tight" id="timeResult">
+                -- 小時 -- 分鐘
+            </div>
+            <p class="text-sm text-green-700 mt-4 leading-relaxed bg-green-100 p-3 rounded-md text-left" id="calculationDetails">
+                <!-- 計算細節將顯示在這裡 -->
+            </p>
+            <p class="text-xs text-stone-500 mt-4">
+                *此為純步行時間估算，請自行加上休息、拍照與用餐時間。
+            </p>
+        </div>
+
+    </div>
+
+    <!-- 邏輯運算腳本 -->
+    <script>
+        function calculateTime() {
+            // 取得使用者輸入值
+            const distance = parseFloat(document.getElementById('distance').value) || 0;
+            const ascent = parseFloat(document.getElementById('ascent').value) || 0;
+            const descent = parseFloat(document.getElementById('descent').value) || 0;
+            const isSteep = document.getElementById('isSteep').checked;
+            const isHeavy = document.getElementById('isHeavy').checked;
+
+            if (distance === 0 && ascent === 0 && descent === 0) {
+                alert("請輸入至少一項數據（距離或高度）來進行計算！");
+                return;
+            }
+
+            // --- 核心計算邏輯 ---
+            // 1. 基礎時間：每 5 公里 1 小時 (12 分鐘/公里)
+            let baseMinutes = distance * 12;
+
+            // 2. 上坡加時：每上升 100 公尺增加 10 分鐘
+            let ascentMinutes = (ascent / 100) * 10;
+
+            // 3. 下坡修正：緩下坡減時，陡下坡加時
+            let descentMinutes = 0;
+            if (isSteep) {
+                descentMinutes = (descent / 300) * 10; // 陡峭：每 300m +10m
+            } else {
+                descentMinutes = -(descent / 300) * 10; // 緩降：每 300m -10m
+            }
+
+            // 加總時間
+            let totalMinutes = baseMinutes + ascentMinutes + descentMinutes;
+
+            // 避免因為大量緩降導致時間變成負數或不合理的小值（設定最小行進速度底線）
+            if (totalMinutes < (distance * 6)) { // 最快不低於每公里 6 分鐘（跑山速度）
+                totalMinutes = distance * 6;
+            }
+            if (totalMinutes < 0) totalMinutes = 0;
+
+            // 4. 重裝係數：步行速度降低 30% -> 所需時間 = 原時間 / (1 - 0.3)
+            let heavyMultiplierText = "";
+            if (isHeavy) {
+                totalMinutes = totalMinutes / 0.7;
+                heavyMultiplierText = " (已包含重裝減速係數)";
+            }
+
+            // --- 格式化顯示 ---
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = Math.round(totalMinutes % 60);
+
+            // 更新結果文字
+            document.getElementById('timeResult').innerHTML = `${hours}<span class="text-xl md:text-2xl text-green-800 ml-1 mr-2">小時</span>${mins}<span class="text-xl md:text-2xl text-green-800 ml-1">分鐘</span>`;
+            
+            // 顯示計算細節幫助理解
+            let details = `<strong>計算解析：</strong><br>`;
+            details += `• 基礎距離耗時：${Math.round(baseMinutes)} 分<br>`;
+            details += `• 爬升耗時：+${Math.round(ascentMinutes)} 分<br>`;
+            details += `• 下降修正：${descentMinutes >= 0 ? '+' : ''}${Math.round(descentMinutes)} 分 (${isSteep ? '陡坡' : '緩坡'})<br>`;
+            if (isHeavy) {
+                details += `• 裝備重量：重裝影響，總時長除以 0.7`;
+            }
+            document.getElementById('calculationDetails').innerHTML = details;
+
+            // 顯示結果區塊
+            const resultBox = document.getElementById('resultBox');
+            resultBox.classList.remove('hidden');
+            
+            // 讓畫面平滑滾動至結果
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+    </script>
+</body>
+</html>
