@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>常見問答 FAQ · 登山時間預估計算工具</title>
+<style>
+  :root{
+    --bg:#0f1b14; --panel:#16261c; --panel2:#1d3327; --line:#2e4a38;
+    --txt:#e8f0ea; --muted:#9db3a6; --accent:#4caf72; --accent2:#7fd6a0;
+    --warn:#e0a458; --chip:#24402f; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:linear-gradient(180deg,#0c1610,#0f1b14 30%,#0d1712); color:var(--txt);
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    text-align:center; padding:38px 20px 26px;
+    background:radial-gradient(1200px 300px at 50% -60px,rgba(76,175,114,.22),transparent);
+    border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0 0 6px; font-size:1.8rem; letter-spacing:1px}
+  header p{margin:0; color:var(--muted); font-size:.95rem}
+  .backlink{display:inline-block; margin-top:14px; padding:8px 16px; border-radius:999px;
+    border:1px solid var(--accent); background:var(--panel); color:var(--accent2);
+    text-decoration:none; font-size:.88rem; transition:.18s}
+  .backlink:hover{background:var(--accent); color:#08130c}
+  .wrap{max-width:920px; margin:0 auto; padding:0 16px 80px}
+  .toc{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 22px; margin:26px 0 22px;
+  }
+  .toc h2{margin:0 0 10px; font-size:1.05rem; color:var(--accent2)}
+  .toc ol{margin:0; padding-left:20px}
+  .toc a{color:var(--txt); text-decoration:none}
+  .toc a:hover{color:var(--accent2); text-decoration:underline}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px; margin-bottom:22px; scroll-margin-top:16px;
+  }
+  .card h2{margin:0 0 16px; font-size:1.3rem; color:var(--accent2);
+    border-bottom:1px solid var(--line); padding-bottom:10px}
+  .qa{margin-bottom:20px}
+  .qa:last-child{margin-bottom:0}
+  .q{font-weight:700; color:var(--txt); margin-bottom:6px; font-size:1rem}
+  .q::before{content:"Q. "; color:var(--accent)}
+  .a{color:var(--muted); font-size:.94rem}
+  .a b{color:var(--txt)}
+  .a ul{margin:8px 0; padding-left:20px}
+  .a li{margin:3px 0}
+  pre{
+    background:rgba(0,0,0,.3); border:1px solid var(--line); border-radius:10px;
+    padding:14px 16px; overflow-x:auto; -webkit-overflow-scrolling:touch;
+    color:var(--accent2); font-size:.88rem; line-height:1.7; margin:10px 0;
+    font-variant-numeric:tabular-nums;
+  }
+  code{background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:.9em; color:var(--accent2)}
+  .tbl-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:10px 0}
+  table{width:100%; border-collapse:collapse; font-size:.9rem; min-width:360px}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left}
+  th{background:var(--panel2); color:var(--accent2); font-weight:600}
+  .chip{display:inline-block; background:var(--chip); border:1px solid var(--line); color:var(--accent2);
+    padding:2px 9px; border-radius:999px; font-size:.72rem; margin-left:8px; vertical-align:middle}
+  .foot{text-align:center; color:var(--muted); font-size:.8rem; margin-top:30px}
+  a{color:var(--accent2)}
+  @media(max-width:560px){
+    header{padding:28px 16px 20px}
+    header h1{font-size:1.4rem}
+    .wrap{padding:0 12px 60px}
+    .card{padding:18px 15px; border-radius:12px}
+    .card h2{font-size:1.12rem}
+    pre{font-size:.8rem; padding:12px}
+    table{font-size:.82rem}
+    th,td{padding:6px 7px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>❓ 常見問答 FAQ</h1>
+  <p>登山時間預估計算工具 · 四種計算方法說明</p>
+  <a class="backlink" href="index.html">← 回到計算工具</a>
+</header>
+
+<div class="wrap">
+
+  <div class="toc">
+    <h2>目錄</h2>
+    <ol>
+      <li><a href="#general">綜合問題</a></li>
+      <li><a href="#naismith">Naismith 法則（1892）</a></li>
+      <li><a href="#munter">Munter 方法（瑞士嚮導）</a></li>
+      <li><a href="#tobler">Tobler 健行函數（1993）</a></li>
+      <li><a href="#shanghe">上河時間 × 係數 ＋ EP 耗力指數</a></li>
+      <li><a href="#tips">操作小技巧</a></li>
+    </ol>
+  </div>
+
+  <!-- 一、綜合 -->
+  <div class="card" id="general">
+    <h2>一、綜合問題</h2>
+
+    <div class="qa">
+      <div class="q">這四種方法，我該用哪一個？</div>
+      <div class="a">
+        <ul>
+          <li><b>只有距離與總爬升兩個數字</b> → 用 <b>Naismith</b>（最快、可心算）。</li>
+          <li><b>路線有明顯上下起伏、想分段算</b> → 用 <b>Munter</b>（上、下、平各段分開計）。</li>
+          <li><b>想要最貼近實測、坡度會變化</b> → 用 <b>Tobler</b>（依坡度指數算速度）。</li>
+          <li><b>手上有上河地形圖的點到點時間</b> → 用 <b>上河時間 × 個人係數</b>（台灣在地最準）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">算出來的時間包含休息、吃飯、拍照嗎？</div>
+      <div class="a">不包含。四種方法算的都是<b>純行進時間</b>。每個計算器都有「休息／彈性加成（%）」欄位可自行加緩衝（上河頁預設已加 20%）。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">為什麼同一條路線，四種方法算出來不一樣？</div>
+      <div class="a">因為各自的假設與適用情境不同（線性 vs. 指數、是否計下坡、資料來源）。建議把它們當作<b>「區間參考」</b>，再依自身腳程、裝備、天候綜合判斷。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">這些數字可以當作絕對安全依據嗎？</div>
+      <div class="a">不行。工具僅供<b>行程規劃參考</b>，實際請以現場狀況、天氣、體能與安全判斷為準。</div>
+    </div>
+  </div>
+
+  <!-- 二、Naismith -->
+  <div class="card" id="naismith">
+    <h2>二、Naismith 法則 <span class="chip">1892</span></h2>
+
+    <div class="qa">
+      <div class="q">公式是什麼？</div>
+      <div class="a">
+<pre>平路時間 = 距離(km) ÷ 平路速度（預設 5 km/h）
+爬升時間 = 爬升(m) ÷ 每小時爬升量（預設 600 m）
+基本時間 = 平路時間 ＋ 爬升時間</pre>
+        範例：10 km、爬升 1200 m → 10÷5 ＋ 1200÷600 = 2 ＋ 2 = <b>4 小時</b>。
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">它的來源？</div>
+      <div class="a">蘇格蘭登山家 <b>William W. Naismith</b> 於 1892 年提出，是登山界最古老、最廣為流傳的估算法則，至今仍是英國山難救援與登山教育的入門標準。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Naismith 的缺點？</div>
+      <div class="a">
+        <ul>
+          <li>假設<b>所有人腳程一致</b>。</li>
+          <li><b>未計休息</b>與下坡減速。</li>
+          <li>因此後人發展出 Tranter、Langmuir 等修正 → 本工具內建 Tranter。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">什麼是 Tranter 體能／疲勞修正？</div>
+      <div class="a">依「個人體能」與「行程長短」把 Naismith 基本時數再縮放。體能以<b>「走 800 m 水平＋爬升 300 m 需幾分鐘」</b>衡量：15 分＝很強、50 分＝弱。行程越長、時間非線性增加。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Tranter 表格裡的空白（—）代表什麼？</div>
+      <div class="a">代表該時數已<b>超出該體能可負荷的範圍</b>。此時工具會自動改用保守加成估計（例如 ×1.4）。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">下坡怎麼算？</div>
+      <div class="a">Naismith 本身未細算下坡。經驗法則：<b>緩坡每下降 300 m 減 10 分鐘、陡坡反而要加時間</b>。</div>
+    </div>
+  </div>
+
+  <!-- 三、Munter -->
+  <div class="card" id="munter">
+    <h2>三、Munter 方法 <span class="chip">瑞士嚮導</span></h2>
+
+    <div class="qa">
+      <div class="q">公式是什麼？</div>
+      <div class="a">
+<pre>每段單位 = 距離(km) ＋ 升降(m) ÷ 100
+每段時間(小時) = 單位 ÷ 速率
+總時間 = 各段時間加總</pre>
+        範例：上坡 3 km／升 600 m → 單位 = 3 ＋ 6 = 9，時間 = 9 ÷ 4 = <b>2.25 小時</b>。
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">各地形的速率是多少？</div>
+      <div class="a">
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>類型</th><th>預設速率（單位/小時）</th></tr></thead>
+          <tbody>
+            <tr><td>上坡</td><td>4</td></tr>
+            <tr><td>平路</td><td>6</td></tr>
+            <tr><td>下坡</td><td>10</td></tr>
+          </tbody>
+        </table></div>
+        （皆可在「進階參數」自行調整。）
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">「升降 m」欄位要填正負嗎？</div>
+      <div class="a">填<b>絕對值</b>：上坡填爬升量、下坡填下降量、平路填 0。<b>路段切得越細越準</b>。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">它的來源與特色？</div>
+      <div class="a">由瑞士嚮導 <b>Werner Munter</b> 提出（他也是雪崩「3×3」風險評估法作者）。原為滑雪登山規劃設計，特色是把距離與升降都換算成統一「單位」，<b>下坡也計入時間</b>，適合起伏明顯的路線。</div>
+    </div>
+  </div>
+
+  <!-- 四、Tobler -->
+  <div class="card" id="tobler">
+    <h2>四、Tobler 健行函數 <span class="chip">1993</span></h2>
+
+    <div class="qa">
+      <div class="q">公式是什麼？</div>
+      <div class="a">
+<pre>坡度 g = 垂直高差(m) ÷ 水平距離(m)   （上坡正、下坡負）
+速度 v(km/h) = α × exp(−β₁ × |g ＋ β₂|) × 地形係數
+時間(小時) = 距離(km) ÷ v</pre>
+        範例：3 km／升 500 m → g = 500÷3000 = 0.167，v ≈ 2.81 km/h，時間 ≈ <b>1 小時 4 分</b>。
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">α、β₁、β₂ 三個參數是什麼意思？（白話版）</div>
+      <div class="a">
+        <ul>
+          <li><b>α＝最大速度（預設 6）</b>：理想狀況下的最快速度。</li>
+          <li><b>β₁＝坡度衰減（預設 3.5）</b>：坡一變陡你會慢多快。<b>數字越大＝越怕坡</b>（陡坡速度掉很多）；越小＝腿越勇。像車子馬力。</li>
+          <li><b>β₂＝坡度偏移（預設 0.05）</b>：決定「走最快的坡度在哪」。人不是在平地最快，而是在<b>一點點下坡</b>時最快 → 甜蜜點約在 <b>−2.86°（−5%）的緩下坡</b>。設成 0 則變平地最快。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">地形係數怎麼選？</div>
+      <div class="a">
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>選項</th><th>係數</th><th>意義</th></tr></thead>
+          <tbody>
+            <tr><td>路徑上</td><td>×1</td><td>有步道的正常路況（基準）</td></tr>
+            <tr><td>越野無路</td><td>×0.6</td><td>鑽草、踩亂石，只剩約六成速度</td></tr>
+            <tr><td>騎馬</td><td>×1.25</td><td>比步行快約 25%</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">它為什麼比 Naismith「準」？</div>
+      <div class="a">參數以瑞士製圖學者 <b>Eduard Imhof</b> 的實測步行資料擬合，能自然呈現「略下坡走最快、太陡上下坡都變慢」的真實現象。缺點是需要逐段坡度，較適合電腦運算。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">坡度變化很大的路線怎麼辦？</div>
+      <div class="a">Tobler 把整段視為<b>固定坡度</b>，若坡度起伏大，建議<b>分段</b>分別計算後再加總。</div>
+    </div>
+  </div>
+
+  <!-- 五、上河 / EP -->
+  <div class="card" id="shanghe">
+    <h2>五、上河時間 × 係數 ＋ EP 耗力指數 <span class="chip">台灣在地</span></h2>
+
+    <div class="qa">
+      <div class="q">為什麼要自己填上河時間，工具不能直接內建？</div>
+      <div class="a">上河文化的地形圖與點到點時間屬其<b>著作權</b>，無法擷取內嵌。請自備紙本或 App 的上河圖，把各段時間填入表格，工具僅負責換算與加總。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">上河時間的計算方式？</div>
+      <div class="a">
+<pre>實際腳程 = 上河總時間(分) × 個人係數
+再乘（1 ＋ 休息%） → 換算為小時</pre>
+        範例：上河 210 分 × 0.9 = 189 分 ≈ 3.15 小時，加 20% 休息 ≈ <b>3 小時 47 分</b>。
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">個人腳程係數怎麼選？</div>
+      <div class="a">
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>係數</th><th>適用</th></tr></thead>
+          <tbody>
+            <tr><td>0.8</td><td>輕裝／腳程快</td></tr>
+            <tr><td>0.9</td><td>略快於一般</td></tr>
+            <tr><td>1.0</td><td>等同上河（一般腳程，不含休息）</td></tr>
+            <tr><td>1.1</td><td>重裝／較慢</td></tr>
+            <tr><td>1.2</td><td>新手／重裝</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">上河的原始數字代表誰的腳程？</div>
+      <div class="a">上河文化百岳地形圖標示的點到點時間，是<b>彙整大量山友實走紀錄的一般腳程（不含休息）</b>，長年被視為台灣排行程的事實標準。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">什麼是 EP 耗力指數？</div>
+      <div class="a">
+<pre>EP ＝ 總距離(km) ＋ 總爬升(m) ÷ 100</pre>
+        概念源自國際越野跑協會（<b>ITRA</b>）：<b>平地走 1 km ≈ 垂直爬升 100 m 的體力</b>。範例：EP = 7.5 ＋ 1400÷100 = <b>21.5</b>。
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">EP 難度怎麼分級？</div>
+      <div class="a">
+        <div class="tbl-scroll"><table>
+          <thead><tr><th>EP 區間</th><th>難度</th><th>典型行程</th></tr></thead>
+          <tbody>
+            <tr><td>&lt; 25</td><td>輕鬆</td><td>郊山、步道、半日行程</td></tr>
+            <tr><td>25–50</td><td>中等</td><td>單日中級山、百岳單攻前段</td></tr>
+            <tr><td>50–80</td><td>偏硬</td><td>長程單日、百岳單攻</td></tr>
+            <tr><td>&gt; 80</td><td>高強度</td><td>多日縱走、重裝長程</td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <div class="qa">
+      <div class="q">EP 有什麼限制？</div>
+      <div class="a">EP 只計距離與爬升，<b>未含</b>下坡負擔、地形破碎、海拔高度、背包重量與天候。適合<b>同類路線橫向比較</b>，不宜當作絕對難度或直接換算時間。</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">有沒有更簡單的新手估法？</div>
+      <div class="a">可用「<b>每公里 30–40 分鐘（含基本休息）</b>」概算。</div>
+    </div>
+  </div>
+
+  <!-- 六、操作 -->
+  <div class="card" id="tips">
+    <h2>六、操作小技巧</h2>
+    <div class="a">
+      <ul>
+        <li>每個欄位兩側有大顆 <b>−／＋</b> 按鈕，可點按或<b>長按連續調整</b>；手機會自動跳數字鍵盤。</li>
+        <li>每個計算器都有可展開的 <b>⚙️ 進階參數</b>，速度、爬升率、β 值、地形係數、休息加成都可調。</li>
+        <li>結果框下方的 <b>計算過程</b> 會依當下參數逐步列出代入算式，方便核對。</li>
+        <li>Munter 與上河頁可用 <b>＋新增路段／－刪除末段</b> 動態增減列數。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin:10px 0 0">
+    <a class="backlink" href="index.html">← 回到計算工具</a>
+  </div>
+
+  <div class="foot">
+    資料來源：Naismith's Rule / Tobler's hiking function / Munter Method / Tranter's Corrections、健行筆記、上河文化、ITRA。<br>
+    僅供行程規劃參考，實際請以現場狀況、天氣、體能與安全判斷為準。
+  </div>
+</div>
+</body>
+</html>
