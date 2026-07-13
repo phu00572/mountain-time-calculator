@@ -1,182 +1,684 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>山域安全：行進時間估算工具</title>
-    <!-- 引入 Tailwind CSS 進行快速且響應式的排版 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* 確保觸控點擊的流暢度與自定義核取方塊樣式 */
-        input[type="checkbox"] {
-            width: 1.5rem;
-            height: 1.5rem;
-            accent-color: #ea580c; /* 鮮橘色 */
-            cursor: pointer;
-        }
-        /* 隱藏數字輸入框的上下箭頭以保持介面乾淨 */
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { 
-            -webkit-appearance: none; 
-            margin: 0; 
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登山時間預估計算工具</title>
+<style>
+  :root{
+    --bg:#0f1b14; --panel:#16261c; --panel2:#1d3327; --line:#2e4a38;
+    --txt:#e8f0ea; --muted:#9db3a6; --accent:#4caf72; --accent2:#7fd6a0;
+    --warn:#e0a458; --chip:#24402f; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:linear-gradient(180deg,#0c1610,#0f1b14 30%,#0d1712); color:var(--txt);
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    text-align:center; padding:38px 20px 26px;
+    background:radial-gradient(1200px 300px at 50% -60px,rgba(76,175,114,.22),transparent);
+    border-bottom:1px solid var(--line);
+  }
+  header h1{margin:0 0 6px; font-size:1.9rem; letter-spacing:1px}
+  header p{margin:0; color:var(--muted); font-size:.95rem}
+  .wrap{max-width:920px; margin:0 auto; padding:0 16px 80px}
+  .tabs{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:26px 0 22px}
+  .tab{
+    border:1px solid var(--line); background:var(--panel); color:var(--muted);
+    padding:9px 16px; border-radius:999px; cursor:pointer; font-size:.9rem; transition:.18s;
+  }
+  .tab:hover{color:var(--txt); border-color:var(--accent)}
+  .tab.active{background:var(--accent); color:#08130c; border-color:var(--accent); font-weight:700}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px; margin-bottom:22px; display:none;
+  }
+  .card.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card h2{margin:0 0 4px; font-size:1.35rem}
+  .card .sub{color:var(--muted); font-size:.9rem; margin-bottom:18px}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .tbl-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+  label{display:block; font-size:.85rem; color:var(--muted); margin-bottom:6px}
+  input[type=number],select{
+    width:100%; padding:11px 12px; background:var(--panel2); border:1px solid var(--line);
+    border-radius:10px; color:var(--txt); font-size:1rem;
+  }
+  input:focus,select:focus{outline:none; border-color:var(--accent)}
+  /* 移除原生數字箭頭（容易誤觸） */
+  input[type=number]{-moz-appearance:textfield}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+  /* 大顆觸控 −／＋ 步進器 */
+  .stepper{display:flex; align-items:stretch; border:1px solid var(--line);
+    border-radius:10px; overflow:hidden; background:var(--panel2)}
+  .stepper:focus-within{border-color:var(--accent)}
+  .stepper input[type=number]{border:none; border-radius:0; text-align:center;
+    background:transparent; flex:1 1 auto; min-width:0}
+  .stepper button{
+    flex:0 0 auto; width:46px; border:none; background:var(--panel); color:var(--accent2);
+    font-size:1.5rem; line-height:1; font-weight:700; cursor:pointer;
+    touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  }
+  .stepper button:first-child{border-right:1px solid var(--line)}
+  .stepper button:last-child{border-left:1px solid var(--line)}
+  .stepper button:active{background:var(--accent); color:#08130c}
+  /* 表格內的小型步進器 */
+  td .stepper button{width:34px; font-size:1.2rem}
+  td .stepper input[type=number]{padding:8px 2px}
+  .field{margin-bottom:6px}
+  .adv{
+    margin-top:16px; border:1px dashed var(--line); border-radius:10px; overflow:hidden;
+  }
+  .adv summary{
+    cursor:pointer; padding:12px 14px; color:var(--accent2); font-size:.9rem; user-select:none;
+    background:var(--panel2);
+  }
+  .adv[open] summary{border-bottom:1px dashed var(--line)}
+  .adv .inner{padding:16px 14px}
+  .result{
+    margin-top:20px; background:linear-gradient(120deg,var(--panel2),var(--chip));
+    border:1px solid var(--accent); border-radius:12px; padding:20px; text-align:center;
+  }
+  .result .big{font-size:2.4rem; font-weight:800; color:var(--accent2); letter-spacing:1px}
+  .result .lbl{color:var(--muted); font-size:.85rem; margin-bottom:4px}
+  .result .break{color:var(--muted); font-size:.85rem; margin-top:10px}
+  .note{
+    margin-top:18px; font-size:.85rem; color:var(--muted); background:var(--panel2);
+    border-left:3px solid var(--accent); border-radius:8px; padding:13px 15px;
+  }
+  .note b{color:var(--txt)}
+  .bg{
+    margin-bottom:18px; font-size:.86rem; color:var(--muted);
+    background:var(--panel2); border-left:3px solid var(--accent2); border-radius:8px; padding:13px 15px;
+  }
+  .bg b{color:var(--accent2)}
+  .calc{
+    margin-top:14px; text-align:left; font-size:.86rem; line-height:1.9;
+    background:rgba(0,0,0,.22); border:1px solid var(--line); border-radius:10px; padding:14px 16px;
+    font-variant-numeric:tabular-nums;
+  }
+  .calc .h{color:var(--accent2); font-weight:700; margin-bottom:4px; display:block}
+  .calc .step{color:var(--txt)}
+  .calc .em{color:var(--accent2); font-weight:700}
+  table{width:100%; border-collapse:collapse; margin-top:6px; font-size:.9rem}
+  th,td{border:1px solid var(--line); padding:8px; text-align:center}
+  th{background:var(--panel2); color:var(--accent2); font-weight:600}
+  td input{padding:7px; font-size:.9rem}
+  .btn{
+    background:var(--accent); color:#08130c; border:none; border-radius:9px; padding:9px 16px;
+    font-weight:700; cursor:pointer; font-size:.9rem; margin-top:10px;
+  }
+  .btn.ghost{background:transparent; color:var(--accent2); border:1px solid var(--line)}
+  .row-actions{display:flex; gap:8px; flex-wrap:wrap}
+  .chip{display:inline-block; background:var(--chip); border:1px solid var(--line); color:var(--accent2);
+    padding:2px 9px; border-radius:999px; font-size:.75rem; margin-left:6px}
+  .foot{text-align:center; color:var(--muted); font-size:.8rem; margin-top:30px}
+  a{color:var(--accent2)}
+  code{background:var(--panel2); padding:1px 6px; border-radius:5px; font-size:.85em}
+
+  /* ---------- 響應式 ---------- */
+  @media(max-width:768px){
+    .wrap{padding:0 12px 60px}
+    .card{padding:20px 16px}
+  }
+  @media(max-width:560px){
+    header{padding:28px 16px 20px}
+    header h1{font-size:1.5rem}
+    header p{font-size:.85rem}
+    .tabs{gap:6px; margin:20px 0 18px; flex-wrap:nowrap; overflow-x:auto;
+      -webkit-overflow-scrolling:touch; justify-content:flex-start; padding-bottom:4px}
+    .tab{flex:0 0 auto; padding:8px 13px; font-size:.82rem}
+    .card{padding:16px 13px; border-radius:12px}
+    .card h2{font-size:1.15rem}
+    .card .sub{font-size:.82rem}
+    .grid{grid-template-columns:1fr; gap:11px}
+    input[type=number],select{padding:10px; font-size:16px} /* 16px 防 iOS 縮放 */
+    .result{padding:16px 13px}
+    .result .big{font-size:1.9rem}
+    .calc,.note,.bg{font-size:.82rem; padding:12px}
+    .calc{line-height:1.75}
+    table{font-size:.8rem}
+    th,td{padding:6px 5px}
+    td input{padding:6px 4px}
+    .row-actions .btn{flex:1 1 auto; text-align:center}
+  }
+  @media(max-width:380px){
+    header h1{font-size:1.32rem}
+    .result .big{font-size:1.65rem}
+    .tab{padding:7px 11px; font-size:.78rem}
+  }
+</style>
 </head>
-<body class="bg-stone-100 text-stone-800 font-sans min-h-screen p-4 md:p-8 flex items-center justify-center">
+<body>
+<header>
+  <h1>⛰️ 登山時間預估計算工具</h1>
+  <p>Naismith · Munter · Tobler · Tranter · 上河時間／EP 耗力指數</p>
+</header>
 
-    <!-- 主容器：手機版滿版，平板/電腦版限制最大寬度，避免橫向滾動 -->
-    <div class="w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden border-t-8 border-green-800">
-        
-        <!-- 標題區塊 -->
-        <div class="bg-green-800 p-6 text-white text-center">
-            <h1 class="text-2xl md:text-3xl font-bold flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                行進時間估算工具
-            </h1>
-            <p class="text-green-100 mt-2 text-sm md:text-base">Naismith's Rule & Langmuir Corrections</p>
-        </div>
+<div class="wrap">
+  <div class="tabs">
+    <button class="tab active" data-t="naismith">Naismith 法則</button>
+    <button class="tab" data-t="munter">Munter 方法</button>
+    <button class="tab" data-t="tobler">Tobler 函數</button>
+    <button class="tab" data-t="shanghe">上河時間 / EP</button>
+  </div>
 
-        <!-- 表單輸入區塊 -->
-        <div class="p-6 space-y-5">
-            
-            <!-- 距離輸入 -->
-            <div>
-                <label for="distance" class="block text-lg font-semibold text-green-900 mb-1">總距離 (公里)</label>
-                <!-- min-h-[44px] 與 p-3 確保手指觸控面積足夠 -->
-                <input type="number" id="distance" placeholder="例如：5" min="0" step="0.1" 
-                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
-            </div>
-
-            <!-- 爬升輸入 -->
-            <div>
-                <label for="ascent" class="block text-lg font-semibold text-green-900 mb-1">總爬升高度 (公尺)</label>
-                <input type="number" id="ascent" placeholder="例如：600" min="0" step="10" 
-                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
-            </div>
-
-            <!-- 下降輸入 -->
-            <div>
-                <label for="descent" class="block text-lg font-semibold text-green-900 mb-1">總下降高度 (公尺)</label>
-                <input type="number" id="descent" placeholder="例如：300" min="0" step="10" 
-                    class="w-full min-h-[44px] p-3 text-lg border-2 border-stone-300 rounded-lg focus:border-green-600 focus:ring-0 transition-colors">
-            </div>
-
-            <!-- 條件選項 (Checkbox) -->
-            <div class="bg-stone-50 p-4 rounded-lg space-y-4 border border-stone-200">
-                <label class="flex items-center space-x-3 cursor-pointer p-1">
-                    <input type="checkbox" id="isSteep">
-                    <span class="text-lg font-medium text-stone-700">陡峭困難下坡</span>
-                    <span class="text-sm text-stone-500 block ml-auto">(會增加耗時)</span>
-                </label>
-                
-                <hr class="border-stone-200">
-
-                <label class="flex items-center space-x-3 cursor-pointer p-1">
-                    <input type="checkbox" id="isHeavy">
-                    <span class="text-lg font-medium text-stone-700">重裝行進</span>
-                    <span class="text-sm text-stone-500 block ml-auto">(速度降 30%)</span>
-                </label>
-            </div>
-
-            <!-- 計算按鈕：鮮橘色高對比 -->
-            <button onclick="calculateTime()" 
-                class="w-full min-h-[56px] mt-4 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xl font-bold rounded-xl shadow-md transition-all flex justify-center items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                開始計算
-            </button>
-
-        </div>
-
-        <!-- 結果顯示區塊 (預設隱藏) -->
-        <div id="resultBox" class="hidden bg-green-50 p-6 border-t border-green-200 text-center">
-            <h2 class="text-lg text-green-800 font-semibold mb-2">預估純行進時間</h2>
-            <div class="text-4xl md:text-5xl font-extrabold text-orange-600 tracking-tight" id="timeResult">
-                -- 小時 -- 分鐘
-            </div>
-            <p class="text-sm text-green-700 mt-4 leading-relaxed bg-green-100 p-3 rounded-md text-left" id="calculationDetails">
-                <!-- 計算細節將顯示在這裡 -->
-            </p>
-            <p class="text-xs text-stone-500 mt-4">
-                *此為純步行時間估算，請自行加上休息、拍照與用餐時間。
-            </p>
-        </div>
-
+  <!-- ============ NAISMITH ============ -->
+  <div class="card active" id="naismith">
+    <h2>Naismith 法則 <span class="chip">最經典 · 1892</span></h2>
+    <div class="sub">最常用的基本估算。可另外套用 <b>Tranter 體能／疲勞修正</b>。</div>
+    <div class="bg">
+      <b>來源與背景：</b>由蘇格蘭登山家 <b>William W. Naismith</b> 於 <b>1892 年</b>提出，是登山界最古老也最廣為流傳的行程估算法則。他從自身多次蘇格蘭高地縱走經驗歸納出「平路 5 km/h、每爬升約 600 m 加 1 小時」的簡單準則。因為只需距離與爬升兩個數字、可心算，至今仍是英國山難救援與登山教育的入門標準；缺點是假設所有人腳程一致、未計休息與下坡減速，後人遂發展 Tranter、Langmuir 等修正。
+    </div>
+    <div class="grid">
+      <div class="field"><label>水平距離（公里）</label><input type="number" id="n_dist" value="10" step="0.1" min="0"></div>
+      <div class="field"><label>總爬升（公尺）</label><input type="number" id="n_up" value="1200" step="10" min="0"></div>
     </div>
 
-    <!-- 邏輯運算腳本 -->
-    <script>
-        function calculateTime() {
-            // 取得使用者輸入值
-            const distance = parseFloat(document.getElementById('distance').value) || 0;
-            const ascent = parseFloat(document.getElementById('ascent').value) || 0;
-            const descent = parseFloat(document.getElementById('descent').value) || 0;
-            const isSteep = document.getElementById('isSteep').checked;
-            const isHeavy = document.getElementById('isHeavy').checked;
+    <details class="adv">
+      <summary>⚙️ 進階參數（可調整）</summary>
+      <div class="inner grid">
+        <div class="field"><label>平路速度（km/h，預設 5）</label><input type="number" id="n_speed" value="5" step="0.5" min="1"></div>
+        <div class="field"><label>每爬升 1 小時所需公尺（預設 600）</label><input type="number" id="n_rate" value="600" step="50" min="100"></div>
+        <div class="field">
+          <label>Tranter 體能修正</label>
+          <select id="n_fit">
+            <option value="0">不套用</option>
+            <option value="15">很強（800m平+300m升 = 15 分）</option>
+            <option value="20">強（20 分）</option>
+            <option value="25">中上（25 分）</option>
+            <option value="30">中等（30 分）</option>
+            <option value="40">中下（40 分）</option>
+            <option value="50">弱（50 分）</option>
+          </select>
+        </div>
+        <div class="field"><label>休息／彈性加成（%）</label><input type="number" id="n_buffer" value="0" step="5" min="0"></div>
+      </div>
+    </details>
 
-            if (distance === 0 && ascent === 0 && descent === 0) {
-                alert("請輸入至少一項數據（距離或高度）來進行計算！");
-                return;
-            }
+    <div class="result">
+      <div class="lbl">預估行進時間</div>
+      <div class="big" id="n_out">—</div>
+      <div class="break" id="n_brk"></div>
+      <div class="calc" id="n_calc"></div>
+    </div>
 
-            // --- 核心計算邏輯 ---
-            // 1. 基礎時間：每 5 公里 1 小時 (12 分鐘/公里)
-            let baseMinutes = distance * 12;
+    <div class="note">
+      <b>📐 計算方式</b><br>
+      1. 平路時間 = 距離(km) ÷ 平路速度（預設 5 km/h）<br>
+      2. 爬升時間 = 爬升(m) ÷ 每小時爬升量（預設 600 m）<br>
+      3. 基本時間 = 平路時間 ＋ 爬升時間<br>
+      4.（選用）以 Tranter 表依體能縮放；再乘（1 ＋ 彈性%）<br>
+      <b>範例：</b>10 km、爬升 1200 m → 10÷5 ＋ 1200÷600 = 2 ＋ 2 = <b>4 小時</b>。<br>
+      此結果<b>不含</b>休息、拍照、用餐與導航延誤。
+    </div>
 
-            // 2. 上坡加時：每上升 100 公尺增加 10 分鐘
-            let ascentMinutes = (ascent / 100) * 10;
+    <div class="note" style="border-left-color:var(--warn)">
+      <b>Tranter 體能／疲勞修正對照表</b>　（將 Naismith 基本時數換算為修正後時數，單位：小時）<br>
+      <span style="color:var(--muted)">體能＝在 800 m 水平、爬升 300 m 的路段所需分鐘數；15 分＝很強、50 分＝弱。長行程時間非線性增加。</span>
+      <div style="overflow-x:auto;margin-top:10px">
+      <table style="min-width:640px">
+        <thead>
+          <tr><th>體能 ＼ Naismith 基本時數</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>12</th><th>14</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>15 分（很強）</th><td>1</td><td>1.5</td><td>2</td><td>2.75</td><td>3.5</td><td>4.5</td><td>5.5</td><td>6.75</td><td>7.75</td><td>9.5</td><td>12</td><td>14</td></tr>
+          <tr><th>20 分（強）</th><td>1.25</td><td>2.25</td><td>3.25</td><td>4.5</td><td>5.5</td><td>6.5</td><td>7.75</td><td>8.75</td><td>10</td><td>12.5</td><td>15</td><td>17.5</td></tr>
+          <tr><th>25 分（中上）</th><td>1.5</td><td>3</td><td>4.25</td><td>5.5</td><td>7</td><td>8.5</td><td>10</td><td>11.5</td><td>13.25</td><td>15</td><td>17.5</td><td>—</td></tr>
+          <tr><th>30 分（中等）</th><td>2</td><td>3.5</td><td>5</td><td>6.75</td><td>8.5</td><td>10.5</td><td>12.5</td><td>14.5</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><th>40 分（中下）</th><td>2.75</td><td>4.25</td><td>5.75</td><td>7.5</td><td>9.5</td><td>11.5</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+          <tr><th>50 分（弱）</th><td>3.25</td><td>4.75</td><td>6.5</td><td>8.5</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <span style="color:var(--muted);font-size:.85em">用法：先算出 Naismith 基本時數 → 在對應「體能列」查該時數欄位的修正值（非整數時線性內插）。表格空白（—）代表超出該體能可負荷範圍，工具會自動改用保守加成估計。下坡：緩坡每 300 m 減 10 分、陡坡反而加時間。</span>
+    </div>
+  </div>
 
-            // 3. 下坡修正：緩下坡減時，陡下坡加時
-            let descentMinutes = 0;
-            if (isSteep) {
-                descentMinutes = (descent / 300) * 10; // 陡峭：每 300m +10m
-            } else {
-                descentMinutes = -(descent / 300) * 10; // 緩降：每 300m -10m
-            }
+  <!-- ============ MUNTER ============ -->
+  <div class="card" id="munter">
+    <h2>Munter 方法 <span class="chip">瑞士嚮導 · 分段計</span></h2>
+    <div class="sub">把路線切成上坡／平路／下坡分段，各用不同速率。<b>下坡也計時間</b>。</div>
+    <div class="bg">
+      <b>來源與背景：</b>由瑞士山岳嚮導 <b>Werner Munter</b> 提出（他也是雪崩風險評估「3×3」與「基本減量法」的作者）。此法原為滑雪登山（ski touring）規劃行程與雪崩時間窗而設計，後被廣泛用於一般登山與健行。核心是把距離與升降都換算成統一的「單位」，再依地形（上坡／平路／下坡）套不同速率，特別適合有明顯上下起伏、需分段評估的路線，也是北美嚮導考證常教的算法。
+    </div>
 
-            // 加總時間
-            let totalMinutes = baseMinutes + ascentMinutes + descentMinutes;
+    <div class="tbl-scroll">
+    <table id="m_tbl" style="min-width:440px">
+      <thead><tr><th>路段</th><th>距離 km</th><th>升降 m<br>（絕對值）</th><th>類型</th><th>速率</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="row-actions">
+      <button class="btn ghost" id="m_add">＋ 新增路段</button>
+      <button class="btn ghost" id="m_del">－ 刪除末段</button>
+    </div>
 
-            // 避免因為大量緩降導致時間變成負數或不合理的小值（設定最小行進速度底線）
-            if (totalMinutes < (distance * 6)) { // 最快不低於每公里 6 分鐘（跑山速度）
-                totalMinutes = distance * 6;
-            }
-            if (totalMinutes < 0) totalMinutes = 0;
+    <details class="adv">
+      <summary>⚙️ 進階參數：各類型速率（單位/小時）</summary>
+      <div class="inner grid">
+        <div class="field"><label>上坡速率（預設 4）</label><input type="number" id="m_up" value="4" step="0.5" min="1"></div>
+        <div class="field"><label>平路速率（預設 6）</label><input type="number" id="m_flat" value="6" step="0.5" min="1"></div>
+        <div class="field"><label>下坡速率（預設 10）</label><input type="number" id="m_down" value="10" step="0.5" min="1"></div>
+        <div class="field"><label>休息／彈性加成（%）</label><input type="number" id="m_buffer" value="0" step="5" min="0"></div>
+      </div>
+    </details>
 
-            // 4. 重裝係數：步行速度降低 30% -> 所需時間 = 原時間 / (1 - 0.3)
-            let heavyMultiplierText = "";
-            if (isHeavy) {
-                totalMinutes = totalMinutes / 0.7;
-                heavyMultiplierText = " (已包含重裝減速係數)";
-            }
+    <div class="result">
+      <div class="lbl">預估行進時間（各段加總）</div>
+      <div class="big" id="m_out">—</div>
+      <div class="break" id="m_brk"></div>
+      <div class="calc" id="m_calc"></div>
+    </div>
 
-            // --- 格式化顯示 ---
-            const hours = Math.floor(totalMinutes / 60);
-            const mins = Math.round(totalMinutes % 60);
+    <div class="note">
+      <b>📐 計算方式</b><br>
+      1. 每段單位 = 距離(km) ＋ 升降(m) ÷ 100（每 1 km ＝ 1 單位、每 100 m 升降 ＝ 1 單位）<br>
+      2. 每段時間(小時) = 單位 ÷ 速率<br>
+      3. 總時間 = 各段時間加總，再乘（1 ＋ 彈性%）<br>
+      <b>速率（單位/小時）：</b>上坡 4、平路 6、下坡 10（健行值；滑雪：上坡 4、下坡 10）。<br>
+      <b>範例：</b>上坡 3 km／升 600 m → 單位 = 3 ＋ 6 = 9，時間 = 9 ÷ 4 = <b>2.25 小時</b>。<br>
+      升降欄請填<b>絕對值</b>（上坡填爬升、下坡填下降、平路填 0），路段切得越細越準。
+    </div>
+  </div>
 
-            // 更新結果文字
-            document.getElementById('timeResult').innerHTML = `${hours}<span class="text-xl md:text-2xl text-green-800 ml-1 mr-2">小時</span>${mins}<span class="text-xl md:text-2xl text-green-800 ml-1">分鐘</span>`;
-            
-            // 顯示計算細節幫助理解
-            let details = `<strong>計算解析：</strong><br>`;
-            details += `• 基礎距離耗時：${Math.round(baseMinutes)} 分<br>`;
-            details += `• 爬升耗時：+${Math.round(ascentMinutes)} 分<br>`;
-            details += `• 下降修正：${descentMinutes >= 0 ? '+' : ''}${Math.round(descentMinutes)} 分 (${isSteep ? '陡坡' : '緩坡'})<br>`;
-            if (isHeavy) {
-                details += `• 裝備重量：重裝影響，總時長除以 0.7`;
-            }
-            document.getElementById('calculationDetails').innerHTML = details;
+  <!-- ============ TOBLER ============ -->
+  <div class="card" id="tobler">
+    <h2>Tobler 健行函數 <span class="chip">指數模型 · 最貼近實測</span></h2>
+    <div class="sub">依坡度指數計算速度，GIS 精算常用。可輸入距離＋高差，或直接給坡度。</div>
+    <div class="bg">
+      <b>來源與背景：</b>由美國地理學家 <b>Waldo Tobler</b> 於 <b>1993 年</b>提出，是地理資訊系統（GIS）計算「最省力路徑／可及性」的基礎函數。其參數是以瑞士製圖學者 <b>Eduard Imhof</b> 的實測步行資料擬合而成，用一條指數曲線描述「速度如何隨坡度改變」。它能自然呈現「略微下坡（約 −2.86°）走最快、太陡的上坡或下坡都變慢」的真實現象，比線性的 Naismith 更貼近實測，缺點是需要逐段坡度、較適合電腦運算。
+    </div>
 
-            // 顯示結果區塊
-            const resultBox = document.getElementById('resultBox');
-            resultBox.classList.remove('hidden');
-            
-            // 讓畫面平滑滾動至結果
-            resultBox.scrollIntoView({ behavior: 'smooth', block: 'end' });
-        }
-    </script>
+    <div class="grid">
+      <div class="field"><label>水平距離（公里）</label><input type="number" id="t_dist" value="3" step="0.1" min="0"></div>
+      <div class="field"><label>高差（公尺，上坡正/下坡負）</label><input type="number" id="t_dh" value="500" step="10"></div>
+    </div>
+
+    <details class="adv">
+      <summary>⚙️ 進階參數</summary>
+      <div class="inner grid">
+        <div class="field"><label>最大速度 α（km/h，預設 6）</label><input type="number" id="t_a" value="6" step="0.5" min="1"></div>
+        <div class="field"><label>坡度衰減 β₁（預設 3.5）</label><input type="number" id="t_b1" value="3.5" step="0.1" min="0.1"></div>
+        <div class="field"><label>坡度偏移 β₂（預設 0.05）</label><input type="number" id="t_b2" value="0.05" step="0.01"></div>
+        <div class="field">
+          <label>地形係數</label>
+          <select id="t_terr">
+            <option value="1">路徑上（×1）</option>
+            <option value="0.6">越野無路（×3/5）</option>
+            <option value="1.25">騎馬（×5/4）</option>
+          </select>
+        </div>
+        <div class="field"><label>休息／彈性加成（%）</label><input type="number" id="t_buffer" value="0" step="5" min="0"></div>
+      </div>
+    </details>
+
+    <div class="result">
+      <div class="lbl">預估行進時間</div>
+      <div class="big" id="t_out">—</div>
+      <div class="break" id="t_brk"></div>
+      <div class="calc" id="t_calc"></div>
+    </div>
+
+    <div class="note">
+      <b>📐 計算方式</b><br>
+      1. 坡度 g = 垂直高差(m) ÷ 水平距離(m)（上坡正、下坡負）<br>
+      2. 速度 v(km/h) = α × exp(−β₁ × |g ＋ β₂|) × 地形係數<br>
+      3. 時間(小時) = 距離(km) ÷ v，再乘（1 ＋ 彈性%）<br>
+      <b>參數：</b>α＝最大速度(6)、β₁＝坡度衰減(3.5)、β₂＝坡度偏移(0.05)。<br>
+      <b>範例：</b>3 km／升 500 m → g = 500 ÷ 3000 = 0.167，v = 6 × exp(−3.5 × 0.217) ≈ 2.81 km/h，時間 = 3 ÷ 2.81 ≈ <b>1 小時 4 分</b>。<br>
+      平地約 5 km/h、最快 6 km/h 出現在約 −2.86°（略下坡）。整段視為固定坡度，坡度變化大時建議分段計算。
+    </div>
+
+    <div class="note" style="border-left-color:var(--accent2)">
+      <b>🔧 參數白話說明</b><br>
+      <b>β₂＝坡度偏移（0.05）：</b>決定「走最快的坡度在哪」。人不是在平地最快，而是在<b>一點點下坡</b>時最快（有重力幫忙、又不必煞車）。0.05 就是說最省力的甜蜜點落在約 −5%（−2.86°）的緩下坡；設成 0 則變成平地最快。<br><br>
+      <b>β₁＝坡度衰減（3.5）：</b>決定「坡一變陡、你會慢多快」。<b>數字越大＝越怕坡</b>，坡稍陡速度就掉很多；數字越小＝腿越勇，陡坡也不太降速。像開車：小馬力的車一遇坡就慢（β₁ 大），大馬力的車爬坡也不太掉速（β₁ 小）。<br><br>
+      <b>地形係數：</b>路況「速度打折」的倍數。公式基準是<b>有步道的正常路況（×1）</b>；沒有路要自己鑽草鑽箭竹、踩亂石的<b>越野無路 ×0.6</b>（只剩六成速度、慢約 40%）；<b>騎馬 ×1.25</b>（比步行快約 25%）。係數越小、速度越慢、時間越長。
+    </div>
+  </div>
+
+  <!-- ============ 上河 / EP ============ -->
+  <div class="card" id="shanghe">
+    <h2>上河時間 × 修正係數 <span class="chip">台灣在地</span></h2>
+    <div class="sub">依你手上的<b>上河地形圖</b>逐段抄下點到點時間，套用個人係數換算實際腳程。</div>
+    <div class="bg">
+      <b>來源與背景：</b><b>上河文化</b>是台灣專業的登山地圖出版社，其《台灣百岳導遊圖／地形圖》系列標示了幾乎所有百岳路線「點到點」的參考時間，數字是彙整<b>大量山友實走紀錄</b>的綜合腳程（一般人、<b>不含休息</b>），長年被視為台灣登山排行程的事實標準。實務上山友會依裝備輕重與自身腳程乘上 0.8~1.2 的係數修正。<b>EP 耗力指數</b>則借用國際越野跑協會（<b>ITRA</b>）的難度評分概念，把距離與爬升折算成單一數值，方便比較不同路線的體力消耗。
+    </div>
+
+    <div class="note" style="margin-top:0;margin-bottom:18px;border-left-color:var(--warn)">
+      ⚠️ <b>關於上河路線圖：</b>上河文化的地形圖與點到點時間屬其著作權，無法直接擷取內嵌於此工具。請自備紙本或 App 的上河圖，把各段時間填入下表由你自行計算。此工具僅提供換算與加總。
+    </div>
+
+    <div class="tbl-scroll">
+    <table id="s_tbl" style="min-width:420px">
+      <thead><tr><th>路段</th><th>上河時間<br>（分鐘）</th><th>距離 km<br>（選填）</th><th>爬升 m<br>（選填）</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    </div>
+    <div class="row-actions">
+      <button class="btn ghost" id="s_add">＋ 新增路段</button>
+      <button class="btn ghost" id="s_del">－ 刪除末段</button>
+    </div>
+
+    <details class="adv" open>
+      <summary>⚙️ 修正參數</summary>
+      <div class="inner grid">
+        <div class="field">
+          <label>個人腳程係數（× 上河時間）</label>
+          <select id="s_factor">
+            <option value="0.8">0.8　輕裝／腳程快</option>
+            <option value="0.9" selected>0.9　略快於一般</option>
+            <option value="1">1.0　等同上河（一般腳程，不含休息）</option>
+            <option value="1.1">1.1　重裝／較慢</option>
+            <option value="1.2">1.2　新手／重裝</option>
+          </select>
+        </div>
+        <div class="field"><label>休息／彈性加成（%）</label><input type="number" id="s_buffer" value="20" step="5" min="0"></div>
+      </div>
+    </details>
+
+    <div class="result">
+      <div class="lbl">預估行進時間</div>
+      <div class="big" id="s_out">—</div>
+      <div class="break" id="s_brk"></div>
+      <div class="calc" id="s_calc"></div>
+    </div>
+
+    <div class="result" style="border-color:var(--warn);background:linear-gradient(120deg,#2a2417,#332a18)">
+      <div class="lbl">EP 耗力指數（路線難度）</div>
+      <div class="big" id="ep_out" style="color:var(--warn)">—</div>
+      <div class="break" id="ep_brk"></div>
+      <div class="calc" id="ep_calc"></div>
+    </div>
+
+    <div class="note" style="border-left-color:var(--warn)">
+      <b>EP 難度參考表</b>　（EP＝距離 km ＋ 爬升 m ÷100，分界僅為概略參考）
+      <div style="overflow-x:auto;margin-top:10px">
+      <table style="min-width:560px">
+        <thead>
+          <tr><th>EP 區間</th><th>難度分級</th><th>典型行程</th><th>體能需求</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>&lt; 25</td><td style="color:#7fd6a0">輕鬆</td><td>郊山、步道、半日行程</td><td>一般民眾可完成</td></tr>
+          <tr><td>25 – 50</td><td style="color:#cfe36a">中等</td><td>單日中級山、百岳單攻前段</td><td>需規律運動習慣</td></tr>
+          <tr><td>50 – 80</td><td style="color:#e0a458">偏硬</td><td>長程單日、百岳單攻</td><td>需良好體能與登山經驗</td></tr>
+          <tr><td>&gt; 80</td><td style="color:#e06a5a">高強度</td><td>多日縱走、重裝長程</td><td>需優異體能與充分訓練</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <span style="color:var(--muted);font-size:.85em">說明：EP 只計距離與爬升，未含下坡負擔、地形破碎、海拔高度、背包重量與天候。適合<b>同類路線橫向比較</b>，不宜當作絕對難度或直接換算時間。各社群分界略有差異，請以實際狀況與自身經驗綜合判斷。</span>
+    </div>
+
+    <div class="note">
+      <b>📐 計算方式</b><br>
+      1. 加總各段上河時間(分)<br>
+      2. 實際腳程 = 上河總時間 × 個人係數（輕裝快 0.8、一般 1.0、重裝慢 1.2）<br>
+      3. 再乘（1 ＋ 休息%）→ 換算為小時<br>
+      4. EP 耗力指數 = 總距離(km) ＋ 總爬升(m) ÷ 100<br>
+      <b>範例：</b>上河 210 分 × 0.9 = 189 分 ≈ 3.15 小時，加 20% 休息 ≈ <b>3 小時 47 分</b>；EP = 7.5 ＋ 1400 ÷ 100 = <b>21.5</b>。<br>
+      <b>上河時間：</b>上河文化百岳地形圖標示的點到點時間，為彙整大量山友紀錄的<b>一般腳程（不含休息）</b>。<br>
+      <b>EP 耗力指數：</b>平地走 1 km ≈ 垂直爬升 100 m 的體力（引自 ITRA），用來橫向比較路線難度，數字越大越硬。<br>
+      <b>新手快估：</b>也可用「每公里 30–40 分鐘（含基本休息）」概算。
+    </div>
+  </div>
+
+  <div class="foot">
+    僅供行程規劃參考，實際請以現場狀況、天氣、體能與安全判斷為準。<br>
+    資料來源：Naismith's Rule / Tobler's hiking function / Munter Method / Tranter's Corrections、健行筆記、上河文化、ITRA。
+  </div>
+</div>
+
+<script>
+/* ---------- 分頁 ---------- */
+document.querySelectorAll('.tab').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.card').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.t).classList.add('active');
+  };
+});
+
+/* ---------- 工具 ---------- */
+function fmt(h){
+  if(!isFinite(h)||h<0) return '—';
+  const H=Math.floor(h), M=Math.round((h-H)*60);
+  if(M===60) return (H+1)+' 小時 0 分';
+  return H+' 小時 '+M+' 分';
+}
+const num=el=>parseFloat(document.getElementById(el).value)||0;
+const buf=(h,id)=>h*(1+num(id)/100);
+
+/* ---------- 觸控步進器：把數字框包成 −[  ]＋ ---------- */
+function makeStepper(inp){
+  if(inp.dataset.st) return; inp.dataset.st='1';
+  const step=parseFloat(inp.step)||1;
+  const hasMin=inp.min!=='' && inp.min!=null;
+  const min=hasMin?parseFloat(inp.min):-Infinity;
+  const dec=(String(step).split('.')[1]||'').length;
+  inp.setAttribute('inputmode','decimal');
+  const wrap=document.createElement('div'); wrap.className='stepper';
+  const mk=t=>{const b=document.createElement('button'); b.type='button'; b.textContent=t; b.tabIndex=-1; return b;};
+  const minus=mk('−'), plus=mk('＋');
+  inp.parentNode.insertBefore(wrap,inp);
+  wrap.appendChild(minus); wrap.appendChild(inp); wrap.appendChild(plus);
+  const bump=dir=>{
+    let v=parseFloat(inp.value); if(isNaN(v)) v=0;
+    v=parseFloat((v+dir*step).toFixed(dec+2));
+    if(v<min) v=min;
+    inp.value=v;
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
+  };
+  [[minus,-1],[plus,1]].forEach(([b,d])=>{
+    let hold,rep;
+    const start=e=>{e.preventDefault(); bump(d);
+      hold=setTimeout(()=>{rep=setInterval(()=>bump(d),90);},420);};
+    const stop=()=>{clearTimeout(hold); clearInterval(rep);};
+    b.addEventListener('pointerdown',start);
+    ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,stop));
+  });
+}
+function enhanceSteppers(scope){
+  (scope||document).querySelectorAll('input[type=number]').forEach(makeStepper);
+}
+
+/* ---------- Naismith ---------- */
+function calcN(){
+  const d=num('n_dist'), up=num('n_up'), sp=num('n_speed')||5, rt=num('n_rate')||600;
+  const th=d/sp, tv=up/rt, base=th+tv;      // 小時
+  const fit=parseFloat(document.getElementById('n_fit').value)||0;
+  const bufp=num('n_buffer');
+  let brk = `距離 ${th.toFixed(2)}h ＋ 爬升 ${tv.toFixed(2)}h`;
+  let t=base;
+  let steps=[
+    `<span class="h">計算過程（依目前參數）</span>`,
+    `① 平路時間 = ${d} km ÷ ${sp} km/h = <span class="em">${th.toFixed(2)} h</span>`,
+    `② 爬升時間 = ${up} m ÷ ${rt} m/h = <span class="em">${tv.toFixed(2)} h</span>`,
+    `③ 基本時間 = ${th.toFixed(2)} ＋ ${tv.toFixed(2)} = <span class="em">${base.toFixed(2)} h</span>`
+  ];
+  if(fit>0){ const f=tranter(fit,base); steps.push(`④ Tranter 修正（體能 ${fit} 分）：${base.toFixed(2)} h → <span class="em">${f.toFixed(2)} h</span>`); t=f; brk += `　→ Tranter(${fit}分)`; }
+  const beforeBuf=t;
+  t=buf(t,'n_buffer');
+  if(bufp>0){ steps.push(`⑤ 加 ${bufp}% 彈性 = ${beforeBuf.toFixed(2)} × ${(1+bufp/100).toFixed(2)} = <span class="em">${t.toFixed(2)} h</span>`); brk += `　＋${bufp}%`; }
+  steps.push(`<b>＝ ${fmt(t)}</b>`);
+  document.getElementById('n_out').textContent=fmt(t);
+  document.getElementById('n_brk').textContent=brk;
+  document.getElementById('n_calc').innerHTML=steps.map(s=>`<div class="step">${s}</div>`).join('');
+}
+// Tranter 修正表：以體能分級與 Naismith 基本時數插值
+function tranter(fitMin, hours){
+  // 表格：列=體能(分)，欄=Naismith基本時數 1,2,3...；值=修正後時數
+  const cols=[1,2,3,4,5,6,7,8,9,10,12,14,16,18,20,22,24];
+  const T={
+    15:[1,1.5,2,2.75,3.5,4.5,5.5,6.75,7.75,9.5,12,14,16,18,20,22,24],
+    20:[1.25,2.25,3.25,4.5,5.5,6.5,7.75,8.75,10,12.5,15,17.5,20,23,null,null,null],
+    25:[1.5,3,4.25,5.5,7,8.5,10,11.5,13.25,15,17.5,null,null,null,null,null,null],
+    30:[2,3.5,5,6.75,8.5,10.5,12.5,14.5,null,null,null,null,null,null,null,null,null],
+    40:[2.75,4.25,5.75,7.5,9.5,11.5,null,null,null,null,null,null,null,null,null,null,null],
+    50:[3.25,4.75,6.5,8.5,null,null,null,null,null,null,null,null,null,null,null,null,null]
+  };
+  const row=T[fitMin]; if(!row) return hours;
+  // 在 cols 上對 hours 線性插值
+  if(hours<=cols[0]) return row[0]*hours/cols[0];
+  for(let i=0;i<cols.length-1;i++){
+    if(hours>=cols[i] && hours<=cols[i+1]){
+      const a=row[i], b=row[i+1];
+      if(a==null) return hours*1.4;      // 超出體能負荷範圍：保守加成
+      if(b==null) return a*hours/cols[i]*1.1;
+      return a+(b-a)*(hours-cols[i])/(cols[i+1]-cols[i]);
+    }
+  }
+  return hours; // 超表：回原值
+}
+['n_dist','n_up','n_speed','n_rate','n_fit','n_buffer'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',calcN);
+});
+
+/* ---------- Munter ---------- */
+const mBody=document.querySelector('#m_tbl tbody');
+function mRow(i,d=1,e=100,type='up'){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${i}</td>
+    <td><input type="number" class="m_d" value="${d}" step="0.1" min="0"></td>
+    <td><input type="number" class="m_e" value="${e}" step="10" min="0"></td>
+    <td><select class="m_t">
+      <option value="up"${type=='up'?' selected':''}>上坡</option>
+      <option value="flat"${type=='flat'?' selected':''}>平路</option>
+      <option value="down"${type=='down'?' selected':''}>下坡</option>
+    </select></td>
+    <td class="m_rate">—</td>`;
+  mBody.appendChild(tr);
+  tr.querySelectorAll('input,select').forEach(x=>x.addEventListener('input',calcM));
+}
+function renumM(){[...mBody.children].forEach((tr,i)=>tr.children[0].textContent=i+1);}
+function calcM(){
+  const ru=num('m_up')||4, rf=num('m_flat')||6, rd=num('m_down')||10;
+  const bufp=num('m_buffer');
+  let total=0, parts=[], steps=[`<span class="h">計算過程（依目前參數）</span>`];
+  const tname={up:'上坡',flat:'平路',down:'下坡'};
+  [...mBody.children].forEach((tr,i)=>{
+    const d=parseFloat(tr.querySelector('.m_d').value)||0;
+    const e=parseFloat(tr.querySelector('.m_e').value)||0;
+    const type=tr.querySelector('.m_t').value;
+    const rate= type=='up'?ru : type=='flat'?rf : rd;
+    const units= d + e/100;
+    const h= units/rate;
+    tr.querySelector('.m_rate').textContent=rate;
+    total+=h; parts.push(h);
+    steps.push(`段${i+1}（${tname[type]}）：${d} ＋ ${e}÷100 = ${units.toFixed(2)} 單位 ÷ ${rate} = <span class="em">${h.toFixed(2)} h</span>`);
+  });
+  steps.push(`合計 = <span class="em">${total.toFixed(2)} h</span>`);
+  let t=buf(total,'m_buffer');
+  if(bufp>0) steps.push(`加 ${bufp}% 彈性 = ${total.toFixed(2)} × ${(1+bufp/100).toFixed(2)} = <span class="em">${t.toFixed(2)} h</span>`);
+  steps.push(`<b>＝ ${fmt(t)}</b>`);
+  document.getElementById('m_out').textContent=fmt(t);
+  document.getElementById('m_brk').textContent=
+    `${parts.length} 段合計 ${fmt(total)}`+(bufp>0?`　＋${bufp}% 彈性`:'');
+  document.getElementById('m_calc').innerHTML=steps.map(s=>`<div class="step">${s}</div>`).join('');
+}
+document.getElementById('m_add').onclick=()=>{mRow(mBody.children.length+1);renumM();enhanceSteppers(mBody.lastChild);calcM();};
+document.getElementById('m_del').onclick=()=>{if(mBody.children.length>1){mBody.lastChild.remove();renumM();calcM();}};
+['m_up','m_flat','m_down','m_buffer'].forEach(id=>document.getElementById(id).addEventListener('input',calcM));
+mRow(1,3,600,'up'); mRow(2,2,0,'flat'); mRow(3,3,600,'down');
+
+/* ---------- Tobler ---------- */
+function calcT(){
+  const d=num('t_dist'), dh=num('t_dh');
+  const a=num('t_a')||6, b1=num('t_b1')||3.5, b2=num('t_b2');
+  const terr=parseFloat(document.getElementById('t_terr').value)||1;
+  const bufp=num('t_buffer');
+  if(d<=0){document.getElementById('t_out').textContent='—';document.getElementById('t_brk').textContent='';document.getElementById('t_calc').innerHTML='';return;}
+  const g = dh/(d*1000);                    // 坡度 = 垂直/水平
+  let v = a*Math.exp(-b1*Math.abs(g+b2))*terr;   // km/h
+  let h = d/v;
+  let t=buf(h,'t_buffer');
+  const ang=(Math.atan(g)*180/Math.PI).toFixed(1);
+  document.getElementById('t_out').textContent=fmt(t);
+  document.getElementById('t_brk').textContent=
+    `坡度 ${(g*100).toFixed(1)}%（${ang}°）· 速度 ${v.toFixed(2)} km/h`
+    +(bufp>0?`　＋${bufp}% 彈性`:'');
+  let steps=[
+    `<span class="h">計算過程（依目前參數）</span>`,
+    `① 坡度 g = ${dh} m ÷ (${d}×1000) = <span class="em">${g.toFixed(3)}</span>（${ang}°）`,
+    `② 速度 v = ${a} × exp(−${b1} × |${g.toFixed(3)}＋${b2}|) × ${terr} = <span class="em">${v.toFixed(2)} km/h</span>`,
+    `③ 時間 = ${d} km ÷ ${v.toFixed(2)} = <span class="em">${h.toFixed(2)} h</span>`
+  ];
+  if(bufp>0) steps.push(`④ 加 ${bufp}% 彈性 = ${h.toFixed(2)} × ${(1+bufp/100).toFixed(2)} = <span class="em">${t.toFixed(2)} h</span>`);
+  steps.push(`<b>＝ ${fmt(t)}</b>`);
+  document.getElementById('t_calc').innerHTML=steps.map(s=>`<div class="step">${s}</div>`).join('');
+}
+['t_dist','t_dh','t_a','t_b1','t_b2','t_terr','t_buffer'].forEach(id=>document.getElementById(id).addEventListener('input',calcT));
+
+/* ---------- 上河 / EP ---------- */
+const sBody=document.querySelector('#s_tbl tbody');
+function sRow(i,t=60,d=0,e=0){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${i}</td>
+    <td><input type="number" class="s_t" value="${t}" step="5" min="0"></td>
+    <td><input type="number" class="s_d" value="${d}" step="0.1" min="0"></td>
+    <td><input type="number" class="s_e" value="${e}" step="10" min="0"></td>`;
+  sBody.appendChild(tr);
+  tr.querySelectorAll('input').forEach(x=>x.addEventListener('input',calcS));
+}
+function renumS(){[...sBody.children].forEach((tr,i)=>tr.children[0].textContent=i+1);}
+function calcS(){
+  const factor=parseFloat(document.getElementById('s_factor').value)||1;
+  let mins=0, dist=0, up=0;
+  [...sBody.children].forEach(tr=>{
+    mins+=parseFloat(tr.querySelector('.s_t').value)||0;
+    dist+=parseFloat(tr.querySelector('.s_d').value)||0;
+    up+=parseFloat(tr.querySelector('.s_e').value)||0;
+  });
+  const bufp=num('s_buffer');
+  const corrMin=mins*factor;
+  let h = corrMin/60;
+  let t = buf(h,'s_buffer');
+  document.getElementById('s_out').textContent=fmt(t);
+  document.getElementById('s_brk').textContent=
+    `上河 ${Math.round(mins)} 分 × ${factor}`+(bufp>0?`　＋${bufp}% 休息`:'');
+  let steps=[
+    `<span class="h">計算過程（依目前參數）</span>`,
+    `① 上河時間合計 = <span class="em">${Math.round(mins)} 分</span>`,
+    `② × 個人係數 ${factor} = ${Math.round(mins)} × ${factor} = <span class="em">${corrMin.toFixed(0)} 分（${h.toFixed(2)} h）</span>`
+  ];
+  if(bufp>0) steps.push(`③ 加 ${bufp}% 休息 = ${h.toFixed(2)} × ${(1+bufp/100).toFixed(2)} = <span class="em">${t.toFixed(2)} h</span>`);
+  steps.push(`<b>＝ ${fmt(t)}</b>`);
+  document.getElementById('s_calc').innerHTML=steps.map(s=>`<div class="step">${s}</div>`).join('');
+  const ep = dist + up/100;
+  document.getElementById('ep_out').textContent = ep>0 ? ep.toFixed(1) : '—';
+  document.getElementById('ep_brk').textContent = ep>0
+    ? `${dist.toFixed(1)} ＋ ${Math.round(up)}÷100 = ${ep.toFixed(1)}`
+    : '填入距離與爬升即可計算';
+  if(ep>0){
+    let level;
+    if(ep<25) level='輕鬆（半日 / 郊山級）';
+    else if(ep<50) level='中等（一日行程）';
+    else if(ep<80) level='偏硬（需良好體能）';
+    else level='高強度（多日 / 重裝級）';
+    document.getElementById('ep_calc').innerHTML=[
+      `<span class="h">計算過程（依目前參數）</span>`,
+      `① 總距離 = <span class="em">${dist.toFixed(1)} km</span>`,
+      `② 總爬升 = <span class="em">${Math.round(up)} m</span>`,
+      `③ 爬升換算 = ${Math.round(up)} ÷ 100 = <span class="em">${(up/100).toFixed(1)}</span>（每 100 m 爬升 ≈ 走 1 km 的體力）`,
+      `④ EP = ${dist.toFixed(1)} ＋ ${(up/100).toFixed(1)} = <span class="em">${ep.toFixed(1)}</span>`,
+      `<b>難度參考：${level}</b>`
+    ].map(s=>`<div class="step">${s}</div>`).join('');
+  } else {
+    document.getElementById('ep_calc').innerHTML='';
+  }
+}
+document.getElementById('s_add').onclick=()=>{sRow(sBody.children.length+1);renumS();enhanceSteppers(sBody.lastChild);calcS();};
+document.getElementById('s_del').onclick=()=>{if(sBody.children.length>1){sBody.lastChild.remove();renumS();calcS();}};
+['s_factor','s_buffer'].forEach(id=>document.getElementById(id).addEventListener('input',calcS));
+sRow(1,90,3.5,600); sRow(2,120,4,800);
+
+/* ---------- 初始計算 ---------- */
+enhanceSteppers(document);
+calcN();calcM();calcT();calcS();
+</script>
 </body>
 </html>
